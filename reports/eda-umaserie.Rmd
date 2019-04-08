@@ -1,5 +1,5 @@
 ---
-title: "EDA Stranger Things"
+title: "Lab 1"
 output:
   html_notebook:
     toc: yes
@@ -16,89 +16,187 @@ library(here)
 theme_set(theme_bw())
 ```
 
-## Objetivo
-
-Explorar as avaliações dos episódios da série Stranger Things. Houve duas temporadas: quais foram os melhores episódios? A melhor temporada?
-
-Ler os dados:
-
+#Lendo dados
 ```{r}
 all_series = read_csv(here("data/series_from_imdb.csv.zip"), 
                       col_types = "ccdcdcdddddddddddd") 
-
-glimpse(all_series)
-
-episodes = all_series %>% 
-    filter(series_name == "Stranger Things") 
-
-glimpse(episodes)
 ```
 
-Estamos interessados nas variáveis `UserRating` e `UserVotes`, principalmente.
+# 1 - Quais das séries de drama na netflix listadas abaixo são as mais bem avaliadas ?
+Séries: 13 Reasons Why, Bates Motel, Better Call Saul, Billions,  Bloodline, Breaking Bad, Grey’s Anatomy, House of Cards, How to Get Away with Murder, Mad Men.
+Fonte: https://www.minhaserie.com.br/novidades/43043-17-melhores-series-de-drama-para-assistir-na-netflix
+```{r}
+drama_series <- c("13 Reasons Why", "Better Call Saul", "Billions", "A Anatomia de Grey", "House of Cards",  "Ozark", "Ray Donovan", "Suits", "The Crown", "The Good Wife")
 
-## Quais os valores que existem de notas? 
+sumario = all_series %>%
+    filter(series_name %in% drama_series) %>%
+    group_by(series_name) %>%
+    summarise(median_series = median(UserRating))
+
+all_series %>%
+    filter(series_name %in% drama_series) %>%
+    group_by(series_name) %>%
+    ggplot(aes(x = series_name, y = UserRating, color = series_name)) + 
+    theme(axis.text.x = element_text(angle = -60)) +
+    geom_jitter(alpha = .5) +
+    geom_point(data = sumario, 
+            mapping = aes(x = series_name, y = median_series), 
+            color = "black", 
+            size = 1.5)
+
+#TODO: pintar o minino de outra cor 
+```
+# 2 - Quais das séries de ficção-científica na netflix listadas abaixo tem a pior avaliação ?
+Series: Black Mirror, Dark, The Expanse, Altered Carbon, Os 100, 3%, Travelers, Mars
+```{r}
+fiction_series <- c("Black Mirror", "Dark", "The Expanse", "Altered Carbon", "Os 100", "3%", "Travelers", "Mars")
+
+sumario = all_series %>%
+    filter(series_name %in% fiction_series) %>%
+    group_by(series_name) %>%
+    summarise(median_series = mean(UserRating))
+
+all_series %>%
+    filter(series_name %in% fiction_series) %>%
+    group_by(series_name) %>%
+    ggplot(aes(x = series_name, y = UserRating, color = series_name)) + 
+    geom_jitter(alpha = .5) +
+    theme(axis.text.x = element_text(angle = -60)) +
+    geom_point(data = sumario, 
+            mapping = aes(x = series_name, y = median_series), 
+            color = "black", 
+            size = 1.5)
+
+```
+# 3 - Quais as durações médias das séries: Grey's Anatomy,  Black Mirror, Strangers Thing, Sex and The City, Avatar: A Lenda de Korra, Orange Is the New Black, House of Cards e The Good Wife ?
+
+R: Das séries escolhidas podemos observar que A Anatomia de Grey tem a maior duração, seguida por The Good Wife. Sex and the City também apresenta uma duração grande. As demais series apresentam uma duração parecida, com exceção de Strager Things e Black Mirror que são series atuais e que ainda possuem pouco episódios.  
 
 ```{r}
-episodes %>% 
-  mutate(season = as.character(season)) %>% 
-  ggplot(mapping = aes(x = season, y = UserRating)) + 
-  geom_point()
-  
+my_series <- c("A Anatomia de Grey",  "Black Mirror", "Stranger Things", "Sex and the City", "Avatar: A Lenda de Korra", "Orange Is the New Black", "House of Cards", "The Good Wife")
+
+all_series %>%
+    filter(series_name %in% my_series) %>%
+    group_by(series_name) %>% 
+    ggplot(aes(x = season_ep, y = series_name, color = series_name)) +
+    geom_line(size = 10 )
 ```
 
-E por faixas de valor?
+# 4 - Quais as melhores e piores temporadas de Grey's Anatomy ?
+```{r}
+sumario = all_series %>%
+    filter(series_name == "A Anatomia de Grey") %>%
+    group_by(season) %>%
+    summarise(median_series = median(UserRating), media = mean(UserRating))
+
+
+all_series %>% 
+    filter(series_name == "A Anatomia de Grey") %>% 
+    group_by(season) %>% 
+    ggplot(aes(x = season, y = UserRating, color = season)) + 
+    geom_point() + 
+    geom_point(data = sumario, 
+            mapping = aes(x = season, y = median_series), 
+            color = "black", 
+            size = 1.5) + 
+    geom_point(data = sumario, 
+            mapping = aes(x = season, y = media), 
+            color = "darkred", 
+            size = 1.5)
+#TODO: ajeitar a ordem 
+``` 
+
+# 5 - Qual episódio de Strangers Things tem mais notas 0 e 10 ?
+```{r}
+all_series %>% 
+    filter(series_name == "Stranger Things") %>% 
+    group_by(season) %>% 
+    ggplot() + 
+    geom_point(aes(x = series_ep, y = r1), color = "red") +
+    geom_point(aes(x = series_ep, y = r10), color = 'green') +
+    scale_x_continuous(breaks = 1:18)
+
+# verde  = r10, vermelho = r1
+#TODO: Colocar legenda acima no grafico
+```
+
+# 6 - Orange is the new black melhorou ou piorou com o tempo ?
+
+R: O primeiro gráfico mostra a nota de cada episódio separado por temporada. É visível que todo episódio de final de temporada tem uma nota maior que todos os episódios da temporada, ou seja, todo episódio final de temporada é amado pelo público. É difícil responder qual a melhor temporada olhando apenas para o primeiro gráfico porém a 4º temporada parece apresentar os melhores episódios, inclusive nesta está o episódio mais bem votado de toda a série. Ao plotar as notas médias de cada temporada no segundo gráfico, as hipotesés são confirmadas a 4º apresenta a melhor nota. Apesar da ultima tempora ser a pior, a serie não apresenta um decaimento gradual de acordo com as tempordas.
+```{r}
+sumario = all_series %>%
+    filter(series_name == "Orange Is the New Black") %>% 
+    group_by(season) %>% 
+    summarise(median_series = median(UserRating)) %>% 
+    glimpse()
+
+all_series %>%
+    filter(series_name == "Orange Is the New Black") %>% 
+    group_by(season) %>% 
+    ggplot(aes(x = series_ep, y = UserRating, color =  season)) +
+    geom_line() 
+
+sumario %>% 
+    ggplot(aes(x = season, y = median_series, color = season)) +
+    geom_point(size = 7)
+```
+
+# Aprofundando as questões 3 e 6
+
+#3 - Existe alguma relação entre a duração de uma séries e sua qualidade ? Teoricamente uma série boa deveria durar mais, pois suas chances de serem renovada é maior.
+    
+```{r}
+my_series <- c("A Anatomia de Grey",  "Black Mirror", "Stranger Things", "Sex and the City", "Avatar: A Lenda de Korra", "Orange Is the New Black", "House of Cards", "The Good Wife")
+
+sumario = all_series %>%
+    filter(series_name %in% my_series) %>%
+    group_by(series_name) %>%
+    summarise(median_series = median(UserRating), media = mean(UserRating))
+
+
+all_series %>% 
+    filter(series_name %in% my_series) %>% 
+    group_by(series_name) %>% 
+    ggplot(aes(x = series_name, y = UserRating, color = series_name)) + 
+    geom_point(alpha = .7) + 
+    theme(axis.text.x = element_text(angle = -60)) +
+    geom_point(data = sumario, 
+            mapping = aes(x = series_name, y = median_series), 
+            color = "black", 
+            size = 1.5) + 
+    geom_point(data = sumario, 
+            mapping = aes(x = series_name, y = media), 
+            color = "darkred", 
+            size = 1.5)
+
+
+all_series %>%
+    filter(series_name %in% my_series) %>%
+    group_by(series_name) %>% 
+    ggplot(aes(x = season_ep, y = series_name, color = series_name)) +
+    geom_line(size = 10 )
+```
+Não parece existir uma relação entre quanto maior a quantidade de episódios de uma séria melhor sua avaliação. Por exemplo, a série Strager Things tem a melhor avaliação, porém é uma das menores, contando apenas com 2  temporadas. A Anatomia de Grey apesar se ser a série com maior quantidade de episódio não apresenta a melhor avaliação. Outro exemplo é a série The Good Wife que é a segunda maior serie, porém apresenta a segunda menor avalição. Quantidade não é qualidade. Provavelmente o fator determinante para a renovação de uma série deve ser somente a audiência.
+
+
+# 6 - Os episódios da melhor (4º) e pior (6º) temporada são muito diferentes em nota ? Existe uma diferença muito grande entre as duas temporadas com as melhores médias (2º e 6º) ? Será que a média foi realmente capaz de representar a 2º e 4º temporada ? 
 
 ```{r}
-episodes %>% 
-  mutate(season = as.character(season)) %>% 
-  ggplot(mapping = aes(x = UserRating)) + 
-  geom_histogram(binwidth = 0.5, 
-                 boundary = 6,
-                 color = "black", 
-                 fill = "salmon") + 
-  geom_rug()
-
+all_series %>%
+    filter(series_name == "Orange Is the New Black") %>% 
+    group_by(season) %>% 
+    filter(season %in% c(4,6)) %>% 
+    ggplot(aes(x = season_ep, y = UserRating, color =  season)) +
+    geom_point() 
+    
+all_series %>%
+    filter(series_name == "Orange Is the New Black") %>% 
+    group_by(season) %>% 
+    filter(season %in% c(2,4)) %>% 
+    ggplot(aes(x = season_ep, y = UserRating, color =  season)) +
+    geom_point() 
 ```
 
-## Quais valores existem para número de votos?
+No primeiro gráfico: A 4º temporada supera em todos os episódio a 6º temporada, com exceção do 4º episódio que tem exatamente a mesma nota. Alguns episódio da 4º temporada são melhores com mais de 1 ponto de diferença. Isso só confirmar a superioridade de qualidade da 4º temporada.
 
-```{r}
-episodes %>% 
-  mutate(season = as.character(season)) %>% 
-  ggplot(mapping = aes(x = season, y = UserVotes)) + 
-  geom_point()
-```
-
-```{r}
-episodes %>% 
-  mutate(season = as.character(season)) %>% 
-  ggplot(mapping = aes(x = UserVotes)) + 
-  geom_histogram(binwidth = 1000, 
-                 boundary = 10000,
-                 color = "black", 
-                 fill = "darkorange") + 
-  geom_rug()
-```
-
-Temos um episódio bem mais avaliado que os demais.
-
-
-## Qual é esse episódio tão mal avaliado?
-
-```{r}
-episodes %>% 
-  mutate(season = as.character(season)) %>% 
-  ggplot(mapping = aes(x = series_ep, y = UserRating, color = season)) + 
-  geom_line()
-```
-
-E qual aquele com mais avaliações?
-
-```{r}
-episodes %>% 
-  mutate(season = as.character(season)) %>% 
-  ggplot(mapping = aes(x = series_ep, y = UserVotes, color = season)) + 
-  geom_line()
-```
-
-Alguma coisa aconteceu no episódio 15...
+No segundo gráfico: Aqui pudemos observar que 5 de 13 episódio da 2º temporada são melhores que da 4º, enquanto 7 de 13 episódios da 4º são melhores que da 2º. Podemos concluir que a média foi uma boa representação da qualidade das temporadas, apesar das mesmas apresentarem médias tão proxímas.
